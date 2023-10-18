@@ -1,9 +1,11 @@
 package SharedResources;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Message {
+public class Message implements Serializable {
 	
+	private static final long serialVersionUID = 1L;
 	private Actions action;
 	private ArrayList<Event> items;
 	

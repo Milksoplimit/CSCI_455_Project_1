@@ -1,12 +1,23 @@
 package SharedResources;
 
+import java.io.Serializable;
 import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 // Base class for events
 // Used for shared functionality and to have a generic type for transit to and from the server
-public abstract class Event implements Displayable {
+public abstract class Event implements Displayable, Serializable {
+	
+	private static final long serialVersionUID = 1L;
+	
+	protected static Lock lock = new ReentrantLock();
+	protected static Condition deleteCondition = lock.newCondition();
+	protected static Condition updateCondition = lock.newCondition();
+	
 	
 	String name = "";
 	double goal = 0.0;
@@ -52,10 +63,36 @@ public abstract class Event implements Displayable {
 	}
 	
 	// Method to represent deleting an event
-	public void delete() {
-		deadline = new Date(0l);
-		status = EventStatus.COMPLETED;
-		count--;
+	public synchronized void delete() {
+		lock.lock();
+		try {
+			deleteCondition.wait();
+			deadline = new Date(0l);
+			status = EventStatus.COMPLETED;
+			count--;
+			deleteCondition.notify();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} finally {
+			lock.unlock();
+		}
+	}
+	
+	public void specialSetCount(int c) {
+		count = c;
+	}
+	
+	public synchronized void changeToCompleted() {
+		lock.lock();
+		try {
+			updateCondition.wait();
+			status = EventStatus.COMPLETED;
+			updateCondition.notify();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} finally {
+			lock.unlock();
+		}
 	}
 	
 	// This method implements the interface Displayable
