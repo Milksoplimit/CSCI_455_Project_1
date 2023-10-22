@@ -26,15 +26,13 @@ public abstract class Event implements Displayable, Serializable {
 	EventStatus status = null;
 	int index;
 	
-	private static int count = 0;
-	
 	public Event() {
 		name = "";
 		goal = 0.0;
 		donations = 0.0;
 		deadline = new Date(0l);
 		status = EventStatus.COMPLETED;
-		index = count++;
+		index = 0;
 	}
 	
 	public String getName() {
@@ -57,6 +55,16 @@ public abstract class Event implements Displayable, Serializable {
 		return status;
 	}
 	
+	public int getIndex() {
+		return index;
+	}
+	
+	// setter for indexing events based on their deadline
+	// meant to only be called in the client and not the server
+	public void setIndex(int i) {
+		index = i;
+	}
+	
 	// This method is used for determining if an event has reached it's goal
 	public boolean isGoalMet() {
 		return donations > goal;
@@ -69,17 +77,12 @@ public abstract class Event implements Displayable, Serializable {
 			deleteCondition.wait();
 			deadline = new Date(0l);
 			status = EventStatus.COMPLETED;
-			count--;
 			deleteCondition.notify();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		} finally {
 			lock.unlock();
 		}
-	}
-	
-	public void specialSetCount(int c) {
-		count = c;
 	}
 	
 	public synchronized void changeToCompleted() {

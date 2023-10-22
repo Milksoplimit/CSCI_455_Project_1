@@ -14,6 +14,7 @@ public class DataService {
 
 	private String path;
 	private ArrayList<Event> inMemoryData;
+	private static LoggingService log = new LoggingService("DataService");
 	
 	private static Lock lock = new ReentrantLock();
 	private static Condition modification = lock.newCondition();
@@ -23,23 +24,24 @@ public class DataService {
 		this.inMemoryData = new ArrayList<Event>();
 	}
 	
-	public boolean loadData() {
-		File f = new File(path);
+	public boolean loadData() throws Exception {
 		try {
+			File f = new File(path);
 			FileInputStream inFile = new FileInputStream(f);
 			ObjectInputStream in = new ObjectInputStream(inFile);
 			inMemoryData = (ArrayList<Event>) in.readObject();
 			in.close();
+			log.log("Data Loaded from File");
 			return true;
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			log.log(e.getMessage());
 			initialize();
 			return false;
 		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-			return false;
+			log.log(e.getMessage());
+			throw new Exception("Fatal Error");
 		}catch (IOException e) {
-			e.printStackTrace();
+			log.log(e.getMessage());
 			initialize();
 			return false;
 		}
@@ -57,6 +59,7 @@ public class DataService {
 				e.add(elem);
 			}
 		}
+		log.log("Current Events Filtered and Returned");
 		return e;
 	}
 	
@@ -67,6 +70,7 @@ public class DataService {
 				e.add(elem);
 			}
 		}
+		log.log("Completed Events Filtered and Returned");
 		return e;
 	}
 	
@@ -77,15 +81,72 @@ public class DataService {
 			inMemoryData.remove(e);
 			e.delete();
 			modification.notify();
+			log.log("Event Deleted");
 		} catch (InterruptedException ex) {
-			ex.printStackTrace();
+			log.log(ex.getMessage());
+		} finally {
+			lock.unlock();
+		}	
+	}
+	
+	// This is meant to only be called periodically and on close of server to save changes to the data
+	public void saveChanges() {
+		lock.lock();
+		try {
+			modification.wait();
+			FileOutputStream outFile = new FileOutputStream(path);
+			ObjectOutputStream out = new ObjectOutputStream(outFile);
+			out.writeObject(inMemoryData);
+			out.close();
+			modification.notify();
+			log.log("Changes Saved");
+		} catch (FileNotFoundException e) {
+			log.log(e.getMessage());
+		} catch (IOException e) {
+			log.log(e.getMessage());
+		} catch (InterruptedException e) {
+			log.log(e.getMessage());
+		} finally {
+			lock.unlock();
+		}	
+	}
+	
+	public void changeEvent(Event e) {
+		lock.lock();
+		try {
+			modification.wait();
+			for (Event elem : inMemoryData) {
+				if (elem.equals(e)) {
+					inMemoryData.remove(elem);
+					inMemoryData.add(e);
+				}
+			}
+			modification.notify();
+			log.log("Event Modified");
+		} catch (InterruptedException ex) {
+			log.log(ex.getMessage());
 		} finally {
 			lock.unlock();
 		}
-		
 	}
 	
-	
+	public void addEvent(Event e) {
+		lock.lock();
+		try {
+			modification.wait();
+			boolean exists = false;
+			for(Event elem : inMemoryData) {
+				if (elem.equals(e)) exists = true;
+			}
+			if (!exists) inMemoryData.add(e);
+			modification.notify();
+			log.log("Event Added");
+		} catch (InterruptedException ex) {
+			log.log(ex.getMessage());
+		} finally {
+			lock.unlock();
+		}
+	}
 	
 	private void initialize() {
 		try {
@@ -97,12 +158,12 @@ public class DataService {
 			}
 			out.writeObject(e);
 			out.close();
+			log.log("Initialization of Events Completed");
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			log.log(e.getMessage());
 		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
+			log.log(e.getMessage());
+		}	
 	}
 	
 	private Event generateEvent() {
