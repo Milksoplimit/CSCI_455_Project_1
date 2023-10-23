@@ -77,10 +77,10 @@ public class DataService {
 	public void deleteEvent(Event e) {
 		lock.lock();
 		try {
-			modification.wait();
+			modification.await();
 			inMemoryData.remove(e);
 			e.delete();
-			modification.notify();
+			modification.signal();
 			log.log("Event Deleted");
 		} catch (InterruptedException ex) {
 			log.log(ex.getMessage());
@@ -93,12 +93,12 @@ public class DataService {
 	public void saveChanges() {
 		lock.lock();
 		try {
-			modification.wait();
+			modification.await();
 			FileOutputStream outFile = new FileOutputStream(path);
 			ObjectOutputStream out = new ObjectOutputStream(outFile);
 			out.writeObject(inMemoryData);
 			out.close();
-			modification.notify();
+			modification.signal();
 			log.log("Changes Saved");
 		} catch (FileNotFoundException e) {
 			log.log(e.getMessage());
@@ -114,14 +114,14 @@ public class DataService {
 	public void changeEvent(Event e) {
 		lock.lock();
 		try {
-			modification.wait();
+			modification.await();
 			for (Event elem : inMemoryData) {
 				if (elem.equals(e)) {
 					inMemoryData.remove(elem);
 					inMemoryData.add(e);
 				}
 			}
-			modification.notify();
+			modification.signal();
 			log.log("Event Modified");
 		} catch (InterruptedException ex) {
 			log.log(ex.getMessage());
@@ -133,13 +133,13 @@ public class DataService {
 	public void addEvent(Event e) {
 		lock.lock();
 		try {
-			modification.wait();
+			modification.await(); //TODO change how we are signaling so we don't get stuck eternally waiting
 			boolean exists = false;
 			for(Event elem : inMemoryData) {
 				if (elem.equals(e)) exists = true;
 			}
 			if (!exists) inMemoryData.add(e);
-			modification.notify();
+			modification.signal();
 			log.log("Event Added");
 		} catch (InterruptedException ex) {
 			log.log(ex.getMessage());
