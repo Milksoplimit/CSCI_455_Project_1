@@ -2,8 +2,6 @@ package Client;
 
 import java.io.*;
 import java.net.*;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -19,6 +17,7 @@ public class Client {
 		Scanner input = new Scanner(System.in);
 		char selection = 0;
 		int index = -1;
+		double ammount = -1.0;
 		
 		do {
 			System.out.println("Start Client? [Y/N]");
@@ -58,6 +57,7 @@ public class Client {
 				break;
 				
 			case 'd':
+				organizeEvents(events);
 				for(int i = 0; i < events.size(); i++) {
 					System.out.println("Index: " + (i+1) + "\n" + events.get(i).display());
 				}
@@ -67,16 +67,7 @@ public class Client {
 				out.writeObject(new Message(null, Actions.GET_CURRENT_EVENTS));
 				messageFromServer = (Message) in.readObject();
 				events = messageFromServer.getItems();
-				Event tempC;
-				for(int i = 0; i < events.size(); i++) {
-					for(int j = 0; j < events.size()-i; j++) {
-						if(events.get(j).getDeadline().after(events.get(j+1).getDeadline())) {
-							tempC = events.get(j);
-							events.set(j, events.get(j+1));
-							events.set(j+1, tempC);
-						}
-					}
-				}
+				inPlaceSort(events);
 				for(int i = 0; i < events.size(); i++) {
 					System.out.println("Index: " + (i+1) + "\n" + events.get(i).display());
 				}
@@ -86,16 +77,7 @@ public class Client {
 				out.writeObject(new Message(null, Actions.GET_OLD_EVENTS));
 				messageFromServer = (Message) in.readObject();
 				events = messageFromServer.getItems();
-				Event tempO;
-				for(int i = 0; i < events.size(); i++) {
-					for(int j = 0; j < events.size()-i; j++) {
-						if(events.get(j).getDeadline().after(events.get(j+1).getDeadline())) {
-							tempO = events.get(j);
-							events.set(j, events.get(j+1));
-							events.set(j+1, tempO);
-						}
-					}
-				}
+				inPlaceSort(events);
 				for(int i = 0; i < events.size(); i++) {
 					System.out.println("Index: " + (i+1) + "\n" + events.get(i).display());
 				}
@@ -111,8 +93,75 @@ public class Client {
 				}
 				break;
 				
-				//TODO Add Cases for Deleting Events and Donating
+			case 't':
+				try {
+					System.out.print("Index of Event to Delete: ");
+					index = Integer.parseInt(input.nextLine());
+					if (index < 1 || index > events.size()) throw new Exception();
+				} catch (Exception ex) {
+					System.out.println("Invalid Index. Please try again.");
+					break;
+				}
+				Event toDelete = events.get(index - 1);
+				ArrayList<Event> deleteItems = new ArrayList<Event>();
+				deleteItems.add(toDelete);
+				out.writeObject(new Message(deleteItems , Actions.DELETE_EVENT));
+				events.remove(toDelete);
+				toDelete.delete();
+				toDelete = null;
+				index = -1;
+				break;
 				
+			case 'n':
+				out.writeObject(new Message(null, Actions.GET_CURRENT_EVENTS));
+				messageFromServer = (Message) in.readObject();
+				events = messageFromServer.getItems();
+				inPlaceSort(events);
+				for(int i = 0; i < events.size(); i++) {
+					System.out.println("Index: " + (i+1) + "\n" + events.get(i).display());
+				}
+				
+				boolean valid = false;
+				while(!valid) {
+					System.out.print("Index of Event to Donate to: ");
+					try {
+						index = Integer.parseInt(input.nextLine());
+						if (index < 1 || index > events.size()) throw new Exception();
+						valid = true;
+					} catch (Exception ex) {
+						System.out.println("Invalid Index");
+						valid = false;
+						index = -1;
+					}
+				}
+				
+				CurrentEvent toDonateTo = (CurrentEvent) events.get(index - 1);
+				
+				valid = false;
+				index = -1;
+				
+				while(!valid) {
+					System.out.print("Ammount to Donate: ");
+					try {
+						ammount = Double.parseDouble(input.nextLine());
+						if (ammount < 0) throw new Exception();
+						valid = true;
+					} catch (Exception ex) {
+						System.out.println("Invalid Donation");
+						valid = false;
+						ammount = -1.0;
+					}
+				}
+				
+				toDonateTo.donate(ammount);
+				ammount = -1.0;
+				
+				ArrayList<Event> messageItems = new ArrayList<Event>();
+				messageItems.add(toDonateTo);
+				out.writeObject(new Message(messageItems, Actions.DONATE));
+				
+				break;
+								
 			default:
 				break;
 			}
@@ -168,12 +217,33 @@ public class Client {
 		case 'd':
 			return new CurrentEvent("Default Name", 1000, 0, new Date(System.currentTimeMillis()));
 			
-		case 'e':
-			return null;
-			
 		default:
 			return null;
 		}
 	}
-
+	
+	// Sorting method that uses bubble sort to sort events based on their deadline
+	private static void inPlaceSort(ArrayList<Event> events) {
+		Event temp;
+		for(int i = 0; i < events.size(); i++) {
+			for(int j = 0; j < events.size()-i-1; j++) {
+				if(events.get(j).getDeadline().after(events.get(j+1).getDeadline())) {
+					temp = events.get(j);
+					events.set(j, events.get(j+1));
+					events.set(j+1, temp);
+				}
+			}
+		}
+	}
+	
+	// Method that breaks events into categories and sorts them in order by category
+	private static void organizeEvents(ArrayList<Event> events) {
+		ArrayList<Event> oldEvents = new ArrayList<Event>();
+		ArrayList<Event> currentEvents = new ArrayList<Event>();
+		for(Event elem : events) if(elem.getStatus() == EventStatus.COMPLETED) oldEvents.add(elem); else currentEvents.add(elem);
+		inPlaceSort(oldEvents);
+		inPlaceSort(currentEvents);
+		events = oldEvents;
+		events.addAll(currentEvents);
+	}
 }

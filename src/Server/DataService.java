@@ -154,14 +154,14 @@ public class DataService {
 	private Event generateEvent() {
 		String[] firstPartNames = {"Super","Amazing","Wonderful","Connected","Distributed","Techno","Active"};
 		String[] secondPartNames = {"Bouncer","Charity","Sport","Crafts","Development","Events","Bonds"};
-		Date[] deadlines = {new Date(2023,1,1), new Date(2023,9,9), new Date(), new Date(2024,1,1), new Date(2024,5,5)};
+		Date[] deadlines = {new Date(2023,1,1), new Date(2023,9,9), new Date(2023, 10, 9), new Date(2024,1,1), new Date(2024,5,5)};
 		Random rand = new Random();
 		double goal = rand.nextDouble() * rand.nextInt(20000);
 		boolean flag = rand.nextBoolean();
 		if(flag) {
 			CurrentEvent c = new CurrentEvent(firstPartNames[rand.nextInt(firstPartNames.length)] + " " + secondPartNames[rand.nextInt(secondPartNames.length)],
 					goal,
-					goal / rand.nextInt(100),
+					goal / (rand.nextInt(99) + 1),
 					deadlines[rand.nextInt(3, deadlines.length)]);
 			return c;
 		}
