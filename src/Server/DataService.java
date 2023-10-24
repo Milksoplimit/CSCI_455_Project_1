@@ -101,6 +101,8 @@ public class DataService {
 		}	
 	}
 	
+	// Method to modify an event
+	// Used for donations in this application
 	public void changeEvent(Event e) {
 		lock.lock();
 		try {
@@ -119,6 +121,7 @@ public class DataService {
 		}
 	}
 	
+	// method to add an event that does nothing if the event already exists
 	public void addEvent(Event e) {
 		lock.lock();
 		try {
@@ -133,6 +136,7 @@ public class DataService {
 		}
 	}
 	
+	// method to generate default values for the server to serve
 	private void initialize() {
 		try {
 			FileOutputStream outFile = new FileOutputStream(path);
@@ -151,6 +155,7 @@ public class DataService {
 		}	
 	}
 	
+	// private method to build an event for initialize method
 	private Event generateEvent() {
 		String[] firstPartNames = {"Super","Amazing","Wonderful","Connected","Distributed","Techno","Active"};
 		String[] secondPartNames = {"Bouncer","Charity","Sport","Crafts","Development","Events","Bonds"};

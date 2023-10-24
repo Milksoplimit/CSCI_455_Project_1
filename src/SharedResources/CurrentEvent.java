@@ -30,9 +30,5 @@ public class CurrentEvent extends Event {
 			lock.unlock();
 		}
 	}
-	
-	public CurrentEvent clone() {
-		return new CurrentEvent(this.name, this.goal, this.donations, this.deadline);
-	}
 
 }

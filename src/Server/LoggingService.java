@@ -1,5 +1,7 @@
 package Server;
 
+
+// Basic logging service that prints messages to the console
 public class LoggingService {
 	
 	private String source;

@@ -1,5 +1,6 @@
 package SharedResources;
 
+// Enum representing the status of an event
 public enum EventStatus {
 	CURRENT,
 	COMPLETED;

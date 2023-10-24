@@ -3,6 +3,7 @@ package SharedResources;
 import java.io.Serializable;
 import java.util.ArrayList;
 
+// Class representing the contents of a message between client and server
 public class Message implements Serializable {
 	
 	private static final long serialVersionUID = 1L;
