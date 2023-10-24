@@ -3,6 +3,7 @@ To run this project, you must import it into an IDE and build it. Then you need 
 ![Server Initialization](image.png)
 
 Now the server will wait for a connection from a client. To run a client, go into Client.java and run. Upon startup enter 'y' to run the client. Enter the IP address of the server (or nothing for a local instance) then enter what you want to do according to the menu options. 
+
 ![Client Initialization](image-1.png) 
 
 Upon fulfilling 5 requests the server will automatically save changes. Additionally, when a client decides to disconnect the server saves changes as well. 
