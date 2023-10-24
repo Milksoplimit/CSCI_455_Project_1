@@ -14,9 +14,8 @@ public class Server {
 	private static LoggingService log = new LoggingService("Server");
 	
 	public static void main(String[] args) throws Exception{
-		do {
-			dataService.loadData();
-		} while (dataService.getInMemoryData() == null);
+		
+		while (!dataService.loadData());
 		
 		ExecutorService executor = Executors.newCachedThreadPool();
 		ServerSocket socket = new ServerSocket(6789);
