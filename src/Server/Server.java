@@ -140,7 +140,7 @@ class ClientHandler implements Runnable {
 			}
 			
 			count++;
-			if(count == 0) {
+			if(count == 5) {
 				count = 0;
 				dataService.saveChanges();
 				try {
