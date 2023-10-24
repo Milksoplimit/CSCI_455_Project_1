@@ -203,7 +203,7 @@ public class Client {
 			
 			valid = false;
 			while(!valid) {
-				System.out.print("Event Deadline: ");
+				System.out.print("Event Deadline (MM-DD-YYYY): ");
 				DateTimeFormatter format = DateTimeFormatter.ofPattern("MM-dd-yyyy");
 				try{
 					LocalDate tempDate = LocalDate.parse(input.nextLine(), format);
