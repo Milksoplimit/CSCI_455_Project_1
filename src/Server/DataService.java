@@ -4,7 +4,6 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Random;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -17,7 +16,6 @@ public class DataService {
 	private static LoggingService log = new LoggingService("DataService");
 	
 	private static Lock lock = new ReentrantLock();
-	private static Condition modification = lock.newCondition();
 	
 	public DataService() {
 		this.path = "./EventFile.ser"; 
@@ -77,13 +75,9 @@ public class DataService {
 	public void deleteEvent(Event e) {
 		lock.lock();
 		try {
-			modification.await();
 			inMemoryData.remove(e);
 			e.delete();
-			modification.signal();
 			log.log("Event Deleted");
-		} catch (InterruptedException ex) {
-			log.log(ex.getMessage());
 		} finally {
 			lock.unlock();
 		}	
@@ -93,18 +87,14 @@ public class DataService {
 	public void saveChanges() {
 		lock.lock();
 		try {
-			modification.await();
 			FileOutputStream outFile = new FileOutputStream(path);
 			ObjectOutputStream out = new ObjectOutputStream(outFile);
 			out.writeObject(inMemoryData);
 			out.close();
-			modification.signal();
 			log.log("Changes Saved");
 		} catch (FileNotFoundException e) {
 			log.log(e.getMessage());
 		} catch (IOException e) {
-			log.log(e.getMessage());
-		} catch (InterruptedException e) {
 			log.log(e.getMessage());
 		} finally {
 			lock.unlock();
@@ -114,17 +104,16 @@ public class DataService {
 	public void changeEvent(Event e) {
 		lock.lock();
 		try {
-			modification.await();
+			Event tochange = null;
 			for (Event elem : inMemoryData) {
 				if (elem.equals(e)) {
-					inMemoryData.remove(elem);
-					inMemoryData.add(e);
+					tochange = elem;
+					
 				}
 			}
-			modification.signal();
+			inMemoryData.remove(tochange);
+			inMemoryData.add(e);
 			log.log("Event Modified");
-		} catch (InterruptedException ex) {
-			log.log(ex.getMessage());
 		} finally {
 			lock.unlock();
 		}
@@ -133,16 +122,12 @@ public class DataService {
 	public void addEvent(Event e) {
 		lock.lock();
 		try {
-			modification.await(); //TODO change how we are signaling so we don't get stuck eternally waiting
 			boolean exists = false;
 			for(Event elem : inMemoryData) {
 				if (elem.equals(e)) exists = true;
 			}
 			if (!exists) inMemoryData.add(e);
-			modification.signal();
 			log.log("Event Added");
-		} catch (InterruptedException ex) {
-			log.log(ex.getMessage());
 		} finally {
 			lock.unlock();
 		}

@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -15,8 +14,6 @@ public abstract class Event implements Displayable, Serializable {
 	private static final long serialVersionUID = 1L;
 	
 	protected static Lock lock = new ReentrantLock();
-	protected static Condition deleteCondition = lock.newCondition();
-	protected static Condition updateCondition = lock.newCondition();
 	
 	
 	String name = "";
@@ -74,12 +71,8 @@ public abstract class Event implements Displayable, Serializable {
 	public synchronized void delete() {
 		lock.lock();
 		try {
-			deleteCondition.wait();
 			deadline = new Date(0l);
 			status = EventStatus.COMPLETED;
-			deleteCondition.notify();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
 		} finally {
 			lock.unlock();
 		}
@@ -88,11 +81,7 @@ public abstract class Event implements Displayable, Serializable {
 	public synchronized void changeToCompleted() {
 		lock.lock();
 		try {
-			updateCondition.wait();
 			status = EventStatus.COMPLETED;
-			updateCondition.notify();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
 		} finally {
 			lock.unlock();
 		}

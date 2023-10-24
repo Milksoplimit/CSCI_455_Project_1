@@ -1,12 +1,9 @@
 package SharedResources;
 
 import java.util.Date;
-import java.util.concurrent.locks.Condition;
 
 // This class represents an ongoing event that has not expired or met its funding goal
 public class CurrentEvent extends Event {
-	
-	private static Condition notDonating = lock.newCondition();
 
 	public CurrentEvent() {
 		super();
@@ -27,12 +24,8 @@ public class CurrentEvent extends Event {
 	public void donate(double donation) {
 		lock.lock();
 		try {
-			notDonating.wait();
 			if (donation < 0) donation = 0;
 			donations += donation;
-			notDonating.notify();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
 		} finally {
 			lock.unlock();
 		}

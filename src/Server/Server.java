@@ -16,7 +16,7 @@ public class Server {
 	public static void main(String[] args) throws Exception{
 		do {
 			dataService.loadData();
-		} while (!dataService.loadData());
+		} while (dataService.getInMemoryData() == null);
 		
 		ExecutorService executor = Executors.newCachedThreadPool();
 		ServerSocket socket = new ServerSocket(6789);
@@ -28,7 +28,7 @@ public class Server {
 			ObjectOutputStream out = new ObjectOutputStream(connectionSocket.getOutputStream());
 			ObjectInputStream in = new ObjectInputStream(connectionSocket.getInputStream());
 			out.writeObject(seed);
-			log.log("RequestType: GET_ALL_EVENTS Origin: IP[" + connectionSocket.getInetAddress() + "] PORT[" + connectionSocket.getPort() + "]");
+			log.log("RequestType: GET_ALL_EVENTS Destination: IP[" + connectionSocket.getInetAddress() + "] PORT[" + connectionSocket.getPort() + "]");
 			Thread thread = new Thread(new ClientHandler(in, out, connectionSocket, dataService, log));
 			executor.execute(thread);
 		}
@@ -57,6 +57,7 @@ class ClientHandler implements Runnable {
 		
 		Actions actionType;
 		ArrayList<Event> events;
+		int count = 0;
 		
 		while(true) {
 			Message clientMessage = null;
@@ -111,7 +112,7 @@ class ClientHandler implements Runnable {
 				
 			case GET_OLD_EVENTS:
 				try {
-					outStream.writeObject(new Message(dataService.getInMemoryData(), Actions.GET_OLD_EVENTS));
+					outStream.writeObject(new Message(dataService.getCompletedEvents(), Actions.GET_OLD_EVENTS));
 					log.log("RequestType: GET_OLD_EVENTS Origin: IP[" + connectionSocket.getInetAddress() + "] PORT[" + connectionSocket.getPort() + "]");
 				} catch (IOException e1) {
 					e1.printStackTrace();
@@ -128,6 +129,7 @@ class ClientHandler implements Runnable {
 			case TERMINATE_CONNECTION:
 				log.log("RequestType: TERMINATE_CONNECTION Origin: IP[" + connectionSocket.getInetAddress() + "] PORT[" + connectionSocket.getPort() + "]");
 				try {
+					dataService.saveChanges();
 					connectionSocket.close();
 				} catch (IOException e1) {
 					e1.printStackTrace();
@@ -136,6 +138,18 @@ class ClientHandler implements Runnable {
 				
 			default:
 				break;
+			}
+			
+			count++;
+			if(count == 0) {
+				count = 0;
+				dataService.saveChanges();
+				try {
+					outStream.writeObject(new Message(dataService.getCurrentEvents(), Actions.GET_ALL_EVENTS));
+					log.log("AUTO SAVE AND UPDATE RequestType: GET_ALL_EVENTS Destination: IP[" + connectionSocket.getInetAddress() + "] PORT[" + connectionSocket.getPort() + "]");
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 			}
 		}
 	}
