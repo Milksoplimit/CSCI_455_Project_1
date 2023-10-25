@@ -1,5 +1,5 @@
 ## INSTRUCTIONS
-To run this project, you must import it into an IDE and build it. Then you need to start the server by running Server.java. On initial startup the server will check for the serialized file containing all the events and if it doesn't exist the server will create it and save it. 
+To run this project, you must import it into an IDE and build it. Then you need to start the server by running Server.java. On initial startup, the server will check for the serialized file containing all the events and if it doesn't exist the server will create it and save it. The server must be running before the client tries to connect otherwise, the client will crash.
 ![Server Initialization](image.png)
 
 Now the server will wait for a connection from a client. To run a client, go into Client.java and run. Upon startup enter 'y' to run the client. Enter the IP address of the server (or nothing for a local instance) then enter what you want to do according to the menu options. 
