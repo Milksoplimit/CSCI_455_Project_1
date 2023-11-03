@@ -1,8 +1,8 @@
 package Server;
 
 import java.io.*;
+import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Random;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -102,7 +102,6 @@ public class DataService {
 	}
 	
 	// Method to modify an event
-	// Used for donations in this application
 	public void changeEvent(Event e) {
 		lock.lock();
 		try {
@@ -116,6 +115,25 @@ public class DataService {
 			inMemoryData.remove(tochange);
 			inMemoryData.add(e);
 			log.log("Event Modified");
+		} finally {
+			lock.unlock();
+		}
+	}
+	
+	public void donateToEvent(Event e) {
+		lock.lock();
+		try {
+			Event tochange = null;
+			for (Event elem : inMemoryData) {
+				if (elem.equals(e)) {
+					tochange = elem;
+					
+				}
+			}
+			double donation = tochange.getDonations() - e.getDonations();
+			CurrentEvent temp = (CurrentEvent) tochange;
+			temp.donate(donation);
+			log.log("Added Donation");
 		} finally {
 			lock.unlock();
 		}
@@ -159,7 +177,7 @@ public class DataService {
 	private Event generateEvent() {
 		String[] firstPartNames = {"Super","Amazing","Wonderful","Connected","Distributed","Techno","Active"};
 		String[] secondPartNames = {"Bouncer","Charity","Sport","Crafts","Development","Events","Bonds"};
-		Date[] deadlines = {new Date(2023,1,1), new Date(2023,9,9), new Date(2023, 10, 9), new Date(2024,1,1), new Date(2024,5,5)};
+		LocalDate[] deadlines = {LocalDate.of(2023,1,1), LocalDate.of(2023,9,9), LocalDate.of(2023, 10, 9), LocalDate.of(2024,1,1), LocalDate.of(2024,5,5)};
 		Random rand = new Random();
 		double goal = rand.nextDouble() * rand.nextInt(20000);
 		boolean flag = rand.nextBoolean();

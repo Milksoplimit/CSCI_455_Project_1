@@ -1,17 +1,17 @@
 package SharedResources;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 // This class represents an ongoing event that has not expired or met its funding goal
 public class CurrentEvent extends Event {
 
 	public CurrentEvent() {
 		super();
-		super.deadline = new Date(Long.MAX_VALUE);
+		super.deadline = LocalDate.ofEpochDay(Long.MAX_VALUE);
 		super.status = EventStatus.CURRENT;
 	}
 	
-	public CurrentEvent(String name, double goal, double donations, Date deadline) {
+	public CurrentEvent(String name, double goal, double donations, LocalDate deadline) {
 		super();
 		super.name = name;
 		super.goal = goal;

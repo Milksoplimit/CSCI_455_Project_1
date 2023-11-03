@@ -28,6 +28,29 @@ public class Client {
 		System.out.println("Server IP (Blank for localhost):");
 		String ip = input.nextLine().trim();
 		if (ip.isEmpty()) ip = "localhost";
+		InetAddress ipAddress = InetAddress.getByName(ip);
+		
+		DatagramSocket clientSocket1 = new DatagramSocket();
+		
+		ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+		ObjectOutputStream outStream = new ObjectOutputStream(byteOut);
+		outStream.writeObject(new Message(null, Actions.GET_ALL_EVENTS));
+		byte[] data = byteOut.toByteArray();
+		DatagramPacket send = new DatagramPacket(data, data.length, ipAddress, 6789);
+		clientSocket1.send(send);
+		
+		byte[] byteIn = new byte[1024];
+		ByteArrayInputStream bis = new ByteArrayInputStream(byteIn);
+		ObjectInputStream inStream = new ObjectInputStream(bis);
+		
+		DatagramPacket recieve = new DatagramPacket(byteIn, byteIn.length);
+		clientSocket1.receive(recieve);
+		Message udpMessage = (Message) inStream.readObject();
+		ArrayList<Event> udpEvents = udpMessage.getItems();
+		for (Event elem : udpEvents) {
+			elem.display();
+		}
+		
 		Socket clientSocket = new Socket(ip, 6789);
 		
 		ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
@@ -187,7 +210,7 @@ public class Client {
 			String name;
 			double goal = -1;
 			double donations = 0;
-			Date deadline = null;
+			LocalDate deadline = null;
 			
 			System.out.print("Event Name: ");
 			name = input.nextLine().trim();
@@ -206,16 +229,15 @@ public class Client {
 				System.out.print("Event Deadline (MM-DD-YYYY): ");
 				DateTimeFormatter format = DateTimeFormatter.ofPattern("MM-dd-yyyy");
 				try{
-					LocalDate tempDate = LocalDate.parse(input.nextLine(), format);
-					deadline = new Date(tempDate.getYear(), tempDate.getMonthValue(), tempDate.getDayOfMonth());
-					if(deadline.after(new Date())) valid = true;
+					deadline = LocalDate.parse(input.nextLine(), format);
+					if(deadline.isAfter(LocalDate.now())) valid = true;
 				} catch(Exception ex) {}
 			}
 			
 			return new CurrentEvent(name, goal, donations, deadline);
 		
 		case 'd':
-			return new CurrentEvent("Default Name", 1000, 0, new Date(System.currentTimeMillis()));
+			return new CurrentEvent("Default Name", 1000, 0, LocalDate.now());
 			
 		default:
 			return null;
@@ -227,7 +249,7 @@ public class Client {
 		Event temp;
 		for(int i = 0; i < events.size(); i++) {
 			for(int j = 0; j < events.size()-i-1; j++) {
-				if(events.get(j).getDeadline().after(events.get(j+1).getDeadline())) {
+				if(events.get(j).getDeadline().isAfter(events.get(j+1).getDeadline())) {
 					temp = events.get(j);
 					events.set(j, events.get(j+1));
 					events.set(j+1, temp);

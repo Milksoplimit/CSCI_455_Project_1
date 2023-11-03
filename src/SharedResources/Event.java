@@ -2,8 +2,8 @@ package SharedResources;
 
 import java.io.Serializable;
 import java.text.NumberFormat;
+import java.time.LocalDate;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -19,17 +19,15 @@ public abstract class Event implements Displayable, Serializable {
 	String name = "";
 	double goal = 0.0;
 	double donations = 0.0;
-	Date deadline = null;
+	LocalDate deadline = null;
 	EventStatus status = null;
-	int index;
 	
 	public Event() {
 		name = "";
 		goal = 0.0;
 		donations = 0.0;
-		deadline = new Date(0l);
+		deadline = LocalDate.of(1, 1, 1);
 		status = EventStatus.COMPLETED;
-		index = 0;
 	}
 	
 	public String getName() {
@@ -44,22 +42,12 @@ public abstract class Event implements Displayable, Serializable {
 		return donations;
 	}
 	
-	public Date getDeadline() {
+	public LocalDate getDeadline() {
 		return deadline;
 	}
 	
 	public EventStatus getStatus() {
 		return status;
-	}
-	
-	public int getIndex() {
-		return index;
-	}
-	
-	// setter for indexing events based on their deadline
-	// meant to only be called in the client and not the server
-	public void setIndex(int i) {
-		index = i;
 	}
 	
 	// This method is used for determining if an event has reached it's goal
@@ -71,7 +59,7 @@ public abstract class Event implements Displayable, Serializable {
 	public synchronized void delete() {
 		lock.lock();
 		try {
-			deadline = new Date(0l);
+			deadline = LocalDate.of(1, 1, 1);
 			status = EventStatus.COMPLETED;
 		} finally {
 			lock.unlock();
@@ -92,7 +80,7 @@ public abstract class Event implements Displayable, Serializable {
 	public String display() {
 		String goalString = "GOAL: " + NumberFormat.getCurrencyInstance().format(goal);
 		String donationsString = "DONATIONS: " + NumberFormat.getCurrencyInstance().format(donations);
-		String deadlineString = "DEADLINE: " + simpleDateString(deadline);
+		String deadlineString = "DEADLINE: " + deadline.toString();
 		
 		// determining the width of the card
 		int width = Math.max(
@@ -126,14 +114,9 @@ public abstract class Event implements Displayable, Serializable {
 		if(o instanceof Event) {
 			Event e = (Event) o;
 			return this.name.equals(e.getName()) 
-					&& simpleDateString(this.deadline).equals(simpleDateString(e.getDeadline()))
+					&& this.deadline.equals(e.getDeadline())
 					&& this.goal - e.getGoal() < 0.0001;
 		}
 		return false;
-	}
-	
-	// private helper method to get a simple date format string
-	private String simpleDateString(Date d) {
-		return d.getMonth() + "-" + d.getDate() + "-" + d.getYear();
 	}
 }
