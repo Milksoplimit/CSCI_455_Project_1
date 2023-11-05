@@ -17,52 +17,63 @@ public class Server {
 		
 		while (!dataService.loadData());
 		
-		ExecutorService executor = Executors.newCachedThreadPool();
-		ServerSocket socket = new ServerSocket(6789);
+		DatagramSocket clientSocket = new DatagramSocket(6789);
+		int count = 0;
 		System.out.println("Running Server");
 		
 		while(true) {
-			Socket connectionSocket = socket.accept();
-			Message seed = new Message(dataService.getInMemoryData(), Actions.GET_ALL_EVENTS);
-			ObjectOutputStream out = new ObjectOutputStream(connectionSocket.getOutputStream());
-			ObjectInputStream in = new ObjectInputStream(connectionSocket.getInputStream());
-			out.writeObject(seed);
-			log.log("RequestType: GET_ALL_EVENTS Destination: IP[" + connectionSocket.getInetAddress() + "] PORT[" + connectionSocket.getPort() + "]");
-			Thread thread = new Thread(new ClientHandler(in, out, connectionSocket, dataService, log));
-			executor.execute(thread);
+			byte[] byteIn = new byte[1024 * 64];
+			DatagramPacket recieve = new DatagramPacket(byteIn, byteIn.length);
+			clientSocket.receive(recieve);
+			Thread thread = new Thread(new UDPClientHandler(recieve, dataService, log));
+			thread.start();
+			
+			count++;
+			if(count == 5) {
+				count = 0;
+				dataService.saveChanges();
+				log.log("AUTO SAVE");
+			}
 		}
 
 	}
 	
 }
 
-class ClientHandler implements Runnable {
-	private ObjectInputStream inStream;
-	private ObjectOutputStream outStream;
-	private Socket connectionSocket;
+class UDPClientHandler implements Runnable{
+	private DatagramPacket packetIn;
+	private ByteArrayInputStream bis;
+	private ObjectInputStream ois;
+	private byte[] byteIn;
 	private DataService dataService;
 	private LoggingService log;
+	private DatagramSocket socketOut;
+	private ByteArrayOutputStream bos;
+	private ObjectOutputStream oos;
 	
-	public ClientHandler(ObjectInputStream in, ObjectOutputStream out, Socket connection, DataService data, LoggingService log) {
-		inStream = in;
-		outStream = out;
-		connectionSocket = connection;
-		dataService = data;
-		this.log = log;
+	public UDPClientHandler(DatagramPacket pIn, DataService dat, LoggingService ls) throws IOException {
+		packetIn = pIn;
+		byteIn = pIn.getData();
+		bis = new ByteArrayInputStream(byteIn);
+		ois = new ObjectInputStream(bis);
+		dataService = dat;
+		log = ls;
+		socketOut = new DatagramSocket();
+		bos = new ByteArrayOutputStream();
+		oos = new ObjectOutputStream(bos);
 	}
+	
 	
 	@Override
 	public void run() {
 		
 		Actions actionType;
 		ArrayList<Event> events;
-		int count = 0;
 		
-		while(true) {
 			Message clientMessage = null;
 			while(clientMessage == null) {
 				try {
-					clientMessage = (Message) inStream.readObject();
+					clientMessage = (Message) ois.readObject();
 				} catch (Exception e) {
 					
 				}
@@ -74,27 +85,28 @@ class ClientHandler implements Runnable {
 			case ADD_EVENT:
 				if (events.size() != 1) break;
 				dataService.addEvent(events.get(0));
-				log.log("RequestType: ADD_EVENT Origin: IP[" + connectionSocket.getInetAddress() + "] PORT[" + connectionSocket.getPort() + "]");
+				log.log("RequestType: ADD_EVENT Origin: IP[" + packetIn.getAddress().toString() + "] PORT[" + packetIn.getPort() + "]");
 				break;
 				
 			case DELETE_EVENT:
 				if (events.size() != 1) break;
 				dataService.deleteEvent(events.get(0));
-				log.log("RequestType: DELETE_EVENT Origin: IP[" + connectionSocket.getInetAddress() + "] PORT[" + connectionSocket.getPort() + "]");
+				log.log("RequestType: DELETE_EVENT Origin: IP[" + packetIn.getAddress().toString() + "] PORT[" + packetIn.getPort() + "]");
 				break;
 				
 			case DONATE:
 				if (events.size() != 1) break;
 				if (!(events.get(0) instanceof CurrentEvent)) break;
 				CurrentEvent e = (CurrentEvent) events.get(0);
-				dataService.changeEvent(e);
-				log.log("RequestType: DONATE Origin: IP[" + connectionSocket.getInetAddress() + "] PORT[" + connectionSocket.getPort() + "]");
+				dataService.donateToEvent(e);
+				log.log("RequestType: DONATE Origin: IP[" + packetIn.getAddress().toString() + "] PORT[" + packetIn.getPort() + "]");
 				break;
 				
 			case GET_ALL_EVENTS:
 				try {
-					outStream.writeObject(new Message(dataService.getInMemoryData(), Actions.GET_ALL_EVENTS));
-					log.log("RequestType: GET_ALL_EVENTS Origin: IP[" + connectionSocket.getInetAddress() + "] PORT[" + connectionSocket.getPort() + "]");
+					oos.writeObject(new Message(dataService.getInMemoryData(), Actions.GET_ALL_EVENTS));
+					sendPacket();
+					log.log("RequestType: GET_ALL_EVENTS Origin: IP[" + packetIn.getAddress().toString() + "] PORT[" + packetIn.getPort() + "]");
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
@@ -102,8 +114,9 @@ class ClientHandler implements Runnable {
 				
 			case GET_CURRENT_EVENTS:
 				try {
-					outStream.writeObject(new Message(dataService.getCurrentEvents(), Actions.GET_CURRENT_EVENTS));
-					log.log("RequestType: GET_CURRENT_EVENTS Origin: IP[" + connectionSocket.getInetAddress() + "] PORT[" + connectionSocket.getPort() + "]");
+					oos.writeObject(new Message(dataService.getCurrentEvents(), Actions.GET_CURRENT_EVENTS));
+					sendPacket();
+					log.log("RequestType: GET_CURRENT_EVENTS Origin: IP[" + packetIn.getAddress().toString() + "] PORT[" + packetIn.getPort() + "]");
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
@@ -111,8 +124,9 @@ class ClientHandler implements Runnable {
 				
 			case GET_OLD_EVENTS:
 				try {
-					outStream.writeObject(new Message(dataService.getCompletedEvents(), Actions.GET_OLD_EVENTS));
-					log.log("RequestType: GET_OLD_EVENTS Origin: IP[" + connectionSocket.getInetAddress() + "] PORT[" + connectionSocket.getPort() + "]");
+					oos.writeObject(new Message(dataService.getCompletedEvents(), Actions.GET_OLD_EVENTS));
+					sendPacket();
+					log.log("RequestType: GET_OLD_EVENTS Origin: IP[" + packetIn.getAddress().toString() + "] PORT[" + packetIn.getPort() + "]");
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
@@ -122,34 +136,24 @@ class ClientHandler implements Runnable {
 				if (events.size() != 1) break;
 				Event event = events.get(0);
 				dataService.changeEvent(event);
-				log.log("RequestType: MARK_COMPLETED Origin: IP[" + connectionSocket.getInetAddress() + "] PORT[" + connectionSocket.getPort() + "]");
+				log.log("RequestType: MARK_COMPLETED Origin: IP[" + packetIn.getAddress().toString() + "] PORT[" + packetIn.getPort() + "]");
 				break;
 				
 			case TERMINATE_CONNECTION:
-				log.log("RequestType: TERMINATE_CONNECTION Origin: IP[" + connectionSocket.getInetAddress() + "] PORT[" + connectionSocket.getPort() + "]");
-				try {
-					dataService.saveChanges();
-					connectionSocket.close();
-				} catch (IOException e1) {
-					e1.printStackTrace();
-				}
+				log.log("RequestType: TERMINATE_CONNECTION Origin: IP[" + packetIn.getAddress().toString() + "] PORT[" + packetIn.getPort() + "]");
+				dataService.saveChanges();
 				return;
 				
 			default:
 				break;
 			}
 			
-			count++;
-			if(count == 5) {
-				count = 0;
-				dataService.saveChanges();
-				try {
-					outStream.writeObject(new Message(dataService.getCurrentEvents(), Actions.GET_ALL_EVENTS));
-					log.log("AUTO SAVE AND UPDATE RequestType: GET_ALL_EVENTS Destination: IP[" + connectionSocket.getInetAddress() + "] PORT[" + connectionSocket.getPort() + "]");
-				} catch (IOException e1) {
-					e1.printStackTrace();
-				}
-			}
-		}
+	}
+	
+	// Method to send a packet back to the client
+	private void sendPacket() throws IOException {
+		byte[] data = bos.toByteArray();
+		DatagramPacket send = new DatagramPacket(data, data.length, packetIn.getSocketAddress());
+		socketOut.send(send);
 	}
 }

@@ -5,7 +5,6 @@ import java.net.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Scanner;
 
 import SharedResources.*;
@@ -30,35 +29,14 @@ public class Client {
 		if (ip.isEmpty()) ip = "localhost";
 		InetAddress ipAddress = InetAddress.getByName(ip);
 		
-		DatagramSocket clientSocket1 = new DatagramSocket();
+		DatagramSocket clientSocket = new DatagramSocket();
 		
-		ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-		ObjectOutputStream outStream = new ObjectOutputStream(byteOut);
-		outStream.writeObject(new Message(null, Actions.GET_ALL_EVENTS));
-		byte[] data = byteOut.toByteArray();
-		DatagramPacket send = new DatagramPacket(data, data.length, ipAddress, 6789);
-		clientSocket1.send(send);
+		sendMessage(new Message(null, Actions.GET_ALL_EVENTS), clientSocket, ipAddress);
 		
-		byte[] byteIn = new byte[1024];
-		ByteArrayInputStream bis = new ByteArrayInputStream(byteIn);
-		ObjectInputStream inStream = new ObjectInputStream(bis);
+		Message messageFromServer = recieveMessage(clientSocket);
 		
-		DatagramPacket recieve = new DatagramPacket(byteIn, byteIn.length);
-		clientSocket1.receive(recieve);
-		Message udpMessage = (Message) inStream.readObject();
-		ArrayList<Event> udpEvents = udpMessage.getItems();
-		for (Event elem : udpEvents) {
-			elem.display();
-		}
-		
-		Socket clientSocket = new Socket(ip, 6789);
-		
-		ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
-		ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
-
-		Message messageFromServer = (Message) in.readObject();
 		ArrayList<Event> events = messageFromServer.getItems();
-		
+
 		while(true) {
 			
 			boolean exit = false;
@@ -75,7 +53,7 @@ public class Client {
 			
 			switch (selection) {
 			case 'e':
-				out.writeObject(new Message(null, Actions.TERMINATE_CONNECTION));
+				sendMessage(new Message(null, Actions.TERMINATE_CONNECTION), clientSocket, ipAddress);
 				exit = true;
 				break;
 				
@@ -87,8 +65,8 @@ public class Client {
 				break;
 				
 			case 'c':
-				out.writeObject(new Message(null, Actions.GET_CURRENT_EVENTS));
-				messageFromServer = (Message) in.readObject();
+				sendMessage(new Message(null, Actions.GET_CURRENT_EVENTS), clientSocket, ipAddress);
+				messageFromServer = recieveMessage(clientSocket);
 				events = messageFromServer.getItems();
 				inPlaceSort(events);
 				for(int i = 0; i < events.size(); i++) {
@@ -97,8 +75,8 @@ public class Client {
 				break;
 				
 			case 'o':
-				out.writeObject(new Message(null, Actions.GET_OLD_EVENTS));
-				messageFromServer = (Message) in.readObject();
+				sendMessage(new Message(null, Actions.GET_OLD_EVENTS), clientSocket, ipAddress);
+				messageFromServer = recieveMessage(clientSocket);
 				events = messageFromServer.getItems();
 				inPlaceSort(events);
 				for(int i = 0; i < events.size(); i++) {
@@ -112,7 +90,7 @@ public class Client {
 					events.add(toAdd);
 					ArrayList<Event> messageItems = new ArrayList<Event>();
 					messageItems.add(toAdd);
-					out.writeObject(new Message(messageItems, Actions.ADD_EVENT));
+					sendMessage(new Message(messageItems, Actions.ADD_EVENT), clientSocket, ipAddress);
 				}
 				break;
 				
@@ -128,7 +106,7 @@ public class Client {
 				Event toDelete = events.get(index - 1);
 				ArrayList<Event> deleteItems = new ArrayList<Event>();
 				deleteItems.add(toDelete);
-				out.writeObject(new Message(deleteItems , Actions.DELETE_EVENT));
+				sendMessage(new Message(deleteItems, Actions.DELETE_EVENT), clientSocket, ipAddress);
 				events.remove(toDelete);
 				toDelete.delete();
 				toDelete = null;
@@ -136,8 +114,8 @@ public class Client {
 				break;
 				
 			case 'n':
-				out.writeObject(new Message(null, Actions.GET_CURRENT_EVENTS));
-				messageFromServer = (Message) in.readObject();
+				sendMessage(new Message(null, Actions.GET_CURRENT_EVENTS), clientSocket, ipAddress);
+				messageFromServer = recieveMessage(clientSocket);
 				events = messageFromServer.getItems();
 				inPlaceSort(events);
 				for(int i = 0; i < events.size(); i++) {
@@ -181,7 +159,7 @@ public class Client {
 				
 				ArrayList<Event> messageItems = new ArrayList<Event>();
 				messageItems.add(toDonateTo);
-				out.writeObject(new Message(messageItems, Actions.DONATE));
+				sendMessage(new Message(messageItems, Actions.DONATE), clientSocket, ipAddress);
 				
 				break;
 								
@@ -190,7 +168,7 @@ public class Client {
 			}
 			
 			if(exit) break;
-		}
+		} 
 		
 		clientSocket.close();
 		input.close();
@@ -267,5 +245,25 @@ public class Client {
 		inPlaceSort(currentEvents);
 		events = oldEvents;
 		events.addAll(currentEvents);
+	}
+
+	// Method for receiving a message from the server
+	private static Message recieveMessage(DatagramSocket ds) throws Exception{
+		byte[] byteIn = new byte[1024 * 64];
+		DatagramPacket recieve = new DatagramPacket(byteIn, byteIn.length);
+		ds.receive(recieve);
+		ByteArrayInputStream bis = new ByteArrayInputStream(recieve.getData());
+		ObjectInputStream in = new ObjectInputStream(bis);
+		return (Message) in.readObject();
+	}
+	
+	// Method for sending a message to the server
+	private static void sendMessage(Message toSend, DatagramSocket ds, InetAddress ip) throws Exception{
+		ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+		ObjectOutputStream out = new ObjectOutputStream(byteOut);
+		out.writeObject(toSend);
+		byte[] data = byteOut.toByteArray();
+		DatagramPacket send = new DatagramPacket(data, data.length, ip, 6789);
+		ds.send(send);
 	}
 }
