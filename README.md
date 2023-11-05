@@ -14,3 +14,11 @@ Upon fulfilling 5 requests the server will automatically save changes. Additiona
 ## ABOUT
 This project is for CSCI 455 - Networking and Parallel Computation. It demonstrates how to do some basic networking using java sockets as well as concurrency and data integrity when there are multiple clients accessing shared resources. This project uses very basic locks to achieve mutual exclusion of shared resources.
 Overall the architecture and the sophistication of the threading and management of shared resources could be improved with more refinement.
+
+
+## Examples of Multiple Clients
+![Multiple UDP Connections](<Multiplle UDP Clients.jpg>)
+
+![Separate Event Types](<Current and Completed Separate Clients.jpg>)
+
+![Synced Changes](<Clients Synced on Event Change.jpg>)
